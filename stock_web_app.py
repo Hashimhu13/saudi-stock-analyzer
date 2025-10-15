@@ -19,14 +19,33 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
+import logging
 
 # تحميل متغيرات البيئة
 load_dotenv()
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+# إعداد اللوجينغ
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-app.secret_key = 'stock_analysis_2025'
+app.secret_key = os.getenv('SECRET_KEY', 'stock_analysis_2025')
+
+# إعداد CORS headers
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+# معالج favicon
+@app.route('/favicon.ico')
+def favicon():
+    """معالج favicon لتجنب خطأ 404"""
+    return app.send_static_file('favicon.ico') if os.path.exists('static/favicon.ico') else ('', 204)
 
 # ملف لحفظ البيانات التاريخية
 HISTORICAL_DATA_FILE = "reports/historical_data.json"
@@ -302,20 +321,44 @@ analyzer = StockAnalyzer()
 @app.route('/')
 def index():
     """الصفحة الرئيسية"""
+    logger.info("عرض الصفحة الرئيسية")
     return render_template('index.html')
+
+@app.route('/health')
+def health():
+    """فحص صحة التطبيق"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'version': '1.0.0'
+    })
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
     """تحليل الأسهم المدخلة"""
     try:
         data = request.get_json()
+        if not data:
+            logger.error("لم يتم استلام بيانات صالحة")
+            return jsonify({'error': 'بيانات غير صالحة'}), 400
+            
         stocks = data.get('stocks', [])
         
         if not stocks:
-            return jsonify({'error': 'لم يتم إدخال أي أسهم'})
+            logger.warning("لم يتم إدخال أي أسهم")
+            return jsonify({'error': 'لم يتم إدخال أي أسهم'}), 400
+        
+        logger.info(f"بدء تحليل {len(stocks)} سهم")
         
         # تحليل الأسهم
         results = analyzer.analyze_stocks(stocks)
+        
+        logger.info(f"تم تحليل {results['total_found']} من {results['total_requested']} أسهم")
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"خطأ في تحليل الأسهم: {str(e)}")
+        return jsonify({'error': f'خطأ في التحليل: {str(e)}'}), 500
         
         return jsonify(results)
         
