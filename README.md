@@ -17,7 +17,7 @@
 ### التثبيت
 ```bash
 # استنساخ المشروع
-git clone https://github.com/YOUR_USERNAME/saudi-stock-analyzer.git
+git clone https://github.com/Hashimhu13/saudi-stock-analyzer.git
 cd saudi-stock-analyzer
 
 # إنشاء بيئة افتراضية
@@ -209,7 +209,7 @@ stockinfo/
 ## 📞 الدعم
 
 إذا واجهت أي مشاكل أو لديك اقتراحات:
-- افتح [Issue](https://github.com/YOUR_USERNAME/saudi-stock-analyzer/issues) جديد
+- افتح [Issue](https://github.com/Hashimhu13/saudi-stock-analyzer/issues) جديد
 - ابعث رسالة مباشرة
 
 ---

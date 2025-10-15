@@ -1,7 +1,7 @@
 {
   "name": "Saudi Stock Analyzer",
   "description": "تطبيق ويب لتحليل الأسهم السعودية مع التوقعات",
-  "repository": "https://github.com/YOUR_USERNAME/saudi-stock-analyzer",
+  "repository": "https://github.com/Hashimhu13/saudi-stock-analyzer",
   "logo": "https://via.placeholder.com/512/2E7D32/FFFFFF?text=📈",
   "keywords": ["python", "flask", "stocks", "saudi", "finance", "arabic"],
   "env": {
