@@ -1,0 +1,1 @@
+web: python stock_web_app.py

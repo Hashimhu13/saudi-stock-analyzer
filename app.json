@@ -1,0 +1,39 @@
+{
+  "name": "Saudi Stock Analyzer",
+  "description": "تطبيق ويب لتحليل الأسهم السعودية مع التوقعات",
+  "repository": "https://github.com/YOUR_USERNAME/saudi-stock-analyzer",
+  "logo": "https://via.placeholder.com/512/2E7D32/FFFFFF?text=📈",
+  "keywords": ["python", "flask", "stocks", "saudi", "finance", "arabic"],
+  "env": {
+    "FLASK_ENV": {
+      "description": "Flask environment",
+      "value": "production"
+    },
+    "FLASK_DEBUG": {
+      "description": "Debug mode",
+      "value": "False"
+    },
+    "SECRET_KEY": {
+      "description": "Secret key for Flask sessions",
+      "generator": "secret"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-google-chrome"
+    },
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-chromedriver"
+    },
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "stack": "heroku-20"
+}

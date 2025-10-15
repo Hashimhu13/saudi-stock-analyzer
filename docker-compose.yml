@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  stock-analyzer:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./reports:/app/reports
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    restart: unless-stopped
+    
+  # خدمة اختيارية لقاعدة بيانات مستقبلية
+  # redis:
+  #   image: redis:alpine
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
