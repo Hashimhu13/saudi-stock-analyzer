@@ -1,11 +1,24 @@
 # محلل الأسهم السعودية 📈
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Arabic](https://img.shields.io/badge/Language-Arabic-red.svg)](README.md)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/Hashimhu13/saudi-stock-analyzer)
+[![Version](https://img.shields.io/badge/Version-v1.0.1-blue.svg)](https://github.com/Hashimhu13/saudi-stock-analyzer/releases)
 
-تطبيق ويب شامل لتحليل الأسهم السعودية مع جلب البيانات المباشرة من السوق السعودية وتوقعات الخبراء.
+<div align="center">
+
+### 🇸🇦 تطبيق ويب شامل لتحليل الأسهم السعودية 🇸🇦
+**جلب البيانات المباشرة • توقعات الخبراء • تحليل شامل**
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/Hashimhu13/saudi-stock-analyzer)
+
+[🚀 **تجربة مباشرة**](http://localhost:5000) • [📚 **التوثيق**](QUICK_GUIDE.md) • [🛣️ **خطة التطوير**](ROADMAP.md) • [📊 **الإحصائيات**](STATS.md)
+
+</div>
+
+---
 
 ## 🚀 البدء السريع
 
@@ -34,6 +47,23 @@ python stock_web_app.py
 
 ثم اذهب إلى: http://localhost:5000
 
+## 📸 لقطات الشاشة
+
+<div align="center">
+
+### 🏠 الصفحة الرئيسية
+*واجهة عربية حديثة وسهلة الاستخدام*
+
+### 📊 نتائج التحليل  
+*عرض شامل للأسعار والتوقعات والتغيرات*
+
+### 🎯 الأسهم الشائعة
+*قائمة سريعة للأسهم الأكثر تداولاً*
+
+</div>
+
+> 💡 **نصيحة**: استخدم زر "تحميل الأسهم الشائعة" للحصول على قائمة جاهزة من الأسهم المهمة!
+
 ## ✨ الميزات
 
 ### 🔍 تحليل شامل للأسهم
@@ -50,16 +80,26 @@ python stock_web_app.py
 
 ### 🌐 واجهة ويب تفاعلية
 - تصميم حديث وسهل الاستخدام
-- دعم كامل للغة العربية
+- دعم كامل للغة العربية (RTL)
 - إدخال متعدد للأسهم
 - قائمة الأسهم الشائعة
 - عرض النتائج فوري
+- واجهة متجاوبة للجوال
 
 ### 📊 تقارير مفصلة
 - ملخص إحصائي شامل
 - بطاقات تفاعلية لكل سهم
 - رموز بصرية للاتجاهات
 - تصدير النتائج
+- حفظ البيانات التاريخية
+
+### 🔧 ميزات تقنية متقدمة
+- معالجة أخطاء ذكية
+- نظام logging متطور
+- دعم CORS للتطوير
+- Health check endpoint
+- Docker support كامل
+- CI/CD مع GitHub Actions
 
 ## 🚀 كيفية التشغيل
 
