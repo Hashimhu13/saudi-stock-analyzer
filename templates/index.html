@@ -727,6 +727,17 @@
                 });
                 
                 $('#results-container').html(resultsHtml);
+                
+                // إضافة رسالة البيانات التجريبية إذا لزم الأمر
+                if (data.is_sample_data) {
+                    $('#results-container').append(`
+                        <div class="alert alert-warning mt-3" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <strong>ملاحظة:</strong> هذه بيانات تجريبية لأغراض التوضيح. 
+                            للحصول على بيانات حقيقية، يرجى التأكد من إعداد الخادم بشكل صحيح.
+                        </div>
+                    `);
+                }
             }
         });
     </script>
