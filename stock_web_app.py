@@ -47,6 +47,25 @@ def favicon():
     """معالج favicon لتجنب خطأ 404"""
     return app.send_static_file('favicon.ico') if os.path.exists('static/favicon.ico') else ('', 204)
 
+# معالج الأخطاء العامة
+@app.errorhandler(404)
+def not_found(error):
+    """معالج خطأ 404"""
+    logger.warning(f"صفحة غير موجودة: {request.url}")
+    return jsonify({'error': 'الصفحة غير موجودة'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """معالج خطأ 500"""
+    logger.error(f"خطأ داخلي: {str(error)}")
+    return jsonify({'error': 'خطأ داخلي في الخادم'}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """معالج الأخطاء العامة"""
+    logger.error(f"خطأ غير متوقع: {str(e)}")
+    return jsonify({'error': 'حدث خطأ غير متوقع'}), 500
+
 # ملف لحفظ البيانات التاريخية
 HISTORICAL_DATA_FILE = "reports/historical_data.json"
 
@@ -56,22 +75,48 @@ class StockAnalyzer:
         self.setup_driver()
     
     def setup_driver(self):
-        """إعداد متصفح Chrome"""
-        try:
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-            
-            self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        except Exception as e:
-            print(f"خطأ في إعداد المتصفح: {e}")
-            self.driver = None
+        """إعداد متصفح Chrome مع معالجة أفضل للأخطاء"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"محاولة إعداد Chrome WebDriver - المحاولة {attempt + 1}")
+                
+                chrome_options = Options()
+                chrome_options.add_argument("--headless")
+                chrome_options.add_argument("--no-sandbox")
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+                chrome_options.add_argument("--disable-extensions")
+                chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--remote-debugging-port=9222")
+                chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                chrome_options.add_experimental_option('useAutomationExtension', False)
+                chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                
+                # تثبيت ChromeDriver وإعداد المتصفح
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                
+                # اختبار المتصفح
+                self.driver.get("https://httpbin.org/ip")
+                logger.info("تم إعداد Chrome WebDriver بنجاح")
+                return
+                
+            except Exception as e:
+                logger.error(f"فشل في إعداد Chrome - المحاولة {attempt + 1}: {str(e)}")
+                if self.driver:
+                    try:
+                        self.driver.quit()
+                    except:
+                        pass
+                    self.driver = None
+                
+                if attempt == max_retries - 1:
+                    logger.error("فشل في إعداد Chrome WebDriver نهائياً")
+                    self.driver = None
+                else:
+                    time.sleep(2)  # انتظار قبل المحاولة التالية
     
     def load_historical_data(self):
         """تحميل البيانات التاريخية من الملف"""
@@ -111,52 +156,73 @@ class StockAnalyzer:
         return historical_data[symbol]["first_price"]
 
     def get_price_from_saudiexchange(self):
-        """جلب الأسعار من الموقع الرسمي للسوق السعودية"""
+        """جلب الأسعار من الموقع الرسمي للسوق السعودية مع معالجة محسنة"""
         if not self.driver:
+            logger.error("Chrome WebDriver غير متوفر")
             return {}
             
-        url = "https://www.saudiexchange.sa/Resources/Reports-v2/DailyFinancialIndicators_ar.html"
+        max_retries = 3
+        urls_to_try = [
+            "https://www.saudiexchange.sa/Resources/Reports-v2/DailyFinancialIndicators_ar.html",
+            "https://www.saudiexchange.sa/wps/portal/saudiexchange/newsandreports/reports-publications/daily-statistical-information",
+        ]
         
-        try:
-            self.driver.get(url)
-            time.sleep(10)
-            
-            wait = WebDriverWait(self.driver, 20)
-            tables = self.driver.find_elements(By.TAG_NAME, "table")
-            
-            if not tables:
-                return self.parse_data_from_text(self.driver.page_source)
-            
-            prices = {}
-            
-            for i, table in enumerate(tables):
+        for url in urls_to_try:
+            for attempt in range(max_retries):
                 try:
-                    rows = table.find_elements(By.TAG_NAME, "tr")
+                    logger.info(f"محاولة جلب البيانات من {url} - المحاولة {attempt + 1}")
+                    self.driver.get(url)
+                    time.sleep(5)  # انتظار تحميل الصفحة
                     
-                    for row in rows:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        if len(cells) >= 2:
-                            company_name = cells[0].text.strip()
-                            price_text = cells[1].text.strip()
+                    # البحث عن الجداول
+                    wait = WebDriverWait(self.driver, 20)
+                    tables = self.driver.find_elements(By.TAG_NAME, "table")
+                    
+                    if not tables:
+                        logger.warning("لم يتم العثور على جداول، محاولة تحليل النص")
+                        return self.parse_data_from_text(self.driver.page_source)
+                    
+                    prices = {}
+                    
+                    for i, table in enumerate(tables):
+                        try:
+                            rows = table.find_elements(By.TAG_NAME, "tr")
+                            logger.info(f"تحليل الجدول {i+1} - {len(rows)} صف")
                             
-                            if company_name and price_text and price_text not in ["-", "", "0", "0.00"]:
-                                try:
-                                    clean_price = re.sub(r'[,\s]', '', price_text)
-                                    if re.match(r'^\d+\.?\d*$', clean_price):
-                                        price = float(clean_price)
-                                        if price > 0:
-                                            prices[company_name] = price
-                                except ValueError:
-                                    continue
+                            for row in rows:
+                                cells = row.find_elements(By.TAG_NAME, "td")
+                                if len(cells) >= 2:
+                                    company_name = cells[0].text.strip()
+                                    price_text = cells[1].text.strip()
                                     
+                                    if company_name and price_text and price_text not in ["-", "", "0", "0.00"]:
+                                        try:
+                                            clean_price = re.sub(r'[,\s]', '', price_text)
+                                            if re.match(r'^\d+\.?\d*$', clean_price):
+                                                price = float(clean_price)
+                                                if price > 0:
+                                                    prices[company_name] = price
+                                                    logger.debug(f"تم العثور على سعر {company_name}: {price}")
+                                        except ValueError:
+                                            continue
+                                            
+                        except Exception as e:
+                            logger.warning(f"خطأ في تحليل الجدول {i+1}: {str(e)}")
+                            continue
+                    
+                    if prices:
+                        logger.info(f"تم جلب {len(prices)} سعر بنجاح")
+                        return prices
+                    else:
+                        logger.warning("لم يتم العثور على أي أسعار في المحاولة")
+                        
                 except Exception as e:
-                    continue
-            
-            return prices
-            
-        except Exception as e:
-            print(f"خطأ عام في جلب البيانات: {e}")
-            return {}
+                    logger.error(f"خطأ في المحاولة {attempt + 1} للرابط {url}: {str(e)}")
+                    if attempt < max_retries - 1:
+                        time.sleep(3)  # انتظار قبل المحاولة التالية
+        
+        logger.error("فشل في جلب البيانات من جميع المصادر")
+        return {}
 
     def parse_data_from_text(self, html_content):
         """استخراج البيانات من النص المباشر"""

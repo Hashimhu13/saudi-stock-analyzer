@@ -367,6 +367,11 @@
                             <div class="spinner"></div>
                             <h5>جاري تحليل الأسهم...</h5>
                             <p>يرجى الانتظار قد تستغرق العملية دقيقة أو دقيقتين</p>
+                            <div class="progress mt-3" style="height: 10px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%" id="progress-bar"></div>
+                            </div>
+                            <small class="text-muted mt-2" id="loading-status">بدء التحليل...</small>
                         </div>
                         
                         <!-- Results Container -->
@@ -419,18 +424,41 @@
             
             // Load popular stocks
             $('#load-popular').click(function() {
-                $.get('/popular_stocks', function(data) {
-                    const container = $('#popular-stocks-container');
-                    container.empty();
-                    
-                    data.forEach(function(stock) {
-                        const btn = `<button class="popular-stock-btn" data-symbol="${stock.symbol}" data-name="${stock.name}">
-                            ${stock.name} (${stock.symbol})
-                        </button>`;
-                        container.append(btn);
-                    });
-                    
-                    $('#popular-stocks').show();
+                const button = $(this);
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحميل...');
+                
+                $.ajax({
+                    url: '/popular_stocks',
+                    method: 'GET',
+                    timeout: 10000,
+                    success: function(data) {
+                        const container = $('#popular-stocks-container');
+                        container.empty();
+                        
+                        if (data && data.length > 0) {
+                            data.forEach(function(stock) {
+                                const btn = `<button class="popular-stock-btn" data-symbol="${stock.symbol}" data-name="${stock.name}">
+                                    ${stock.name} (${stock.symbol})
+                                </button>`;
+                                container.append(btn);
+                            });
+                            
+                            $('#popular-stocks').show();
+                            showAlert(`تم تحميل ${data.length} سهم شائع`, 'info');
+                        } else {
+                            showAlert('لم يتم العثور على أسهم شائعة', 'warning');
+                        }
+                        
+                        button.prop('disabled', false).html('<i class="fas fa-star"></i> تحميل الأسهم الشائعة');
+                    },
+                    error: function(xhr, status) {
+                        button.prop('disabled', false).html('<i class="fas fa-star"></i> تحميل الأسهم الشائعة');
+                        
+                        const errorMessage = status === 'timeout' ? 
+                            'انتهت مهلة تحميل الأسهم الشائعة' : 
+                            'خطأ في تحميل الأسهم الشائعة';
+                        showAlert(errorMessage, 'error');
+                    }
                 });
             });
             
@@ -468,9 +496,12 @@
                 });
                 
                 if (stocks.length === 0) {
-                    alert('يرجى إدخال سهم واحد على الأقل');
+                    showAlert('يرجى إدخال سهم واحد على الأقل', 'warning');
                     return;
                 }
+                
+                // Disable analyze button during processing
+                $('#analyze-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحليل...');
                 
                 // Show results section and loading
                 $('#results-section').show();
@@ -478,32 +509,124 @@
                 $('#results-container').empty();
                 $('#summary-stats').empty();
                 
+                // Start progress simulation
+                simulateProgress(stocks.length);
+                
                 // Scroll to results
                 $('html, body').animate({
                     scrollTop: $('#results-section').offset().top - 100
                 }, 800);
                 
-                // Send request
+                // Send request with timeout
                 $.ajax({
                     url: '/analyze',
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({stocks: stocks}),
+                    timeout: 120000, // 2 minutes timeout
                     success: function(response) {
+                        completeProgress();
                         $('#loading').hide();
+                        $('#analyze-btn').prop('disabled', false).html('<i class="fas fa-chart-bar"></i> تحليل الأسهم');
                         displayResults(response);
                     },
-                    error: function(xhr) {
+                    error: function(xhr, status, error) {
+                        completeProgress();
                         $('#loading').hide();
-                        const error = xhr.responseJSON ? xhr.responseJSON.error : 'حدث خطأ في التحليل';
+                        $('#analyze-btn').prop('disabled', false).html('<i class="fas fa-chart-bar"></i> تحليل الأسهم');
+                        
+                        let errorMessage = 'حدث خطأ في التحليل';
+                        
+                        if (status === 'timeout') {
+                            errorMessage = 'انتهت مهلة الاتصال - يرجى المحاولة مرة أخرى';
+                        } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        } else if (xhr.status === 0) {
+                            errorMessage = 'خطأ في الاتصال - تحقق من الإنترنت';
+                        } else if (xhr.status >= 500) {
+                            errorMessage = 'خطأ في الخادم - يرجى المحاولة لاحقاً';
+                        }
+                        
                         $('#results-container').html(`
                             <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle"></i> ${error}
+                                <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
+                                <br><small>كود الخطأ: ${xhr.status}</small>
                             </div>
                         `);
                     }
                 });
             });
+            
+            // Helper function to show alerts
+            function showAlert(message, type = 'info') {
+                const alertClass = type === 'warning' ? 'alert-warning' : 
+                                 type === 'error' ? 'alert-danger' : 'alert-info';
+                
+                const alertHtml = `
+                    <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                
+                $('.content-area').prepend(alertHtml);
+                
+                // Auto dismiss after 5 seconds
+                setTimeout(function() {
+                    $('.alert').first().fadeOut();
+                }, 5000);
+            }
+            
+            // Simulate progress for user feedback
+            function simulateProgress(stockCount) {
+                let progress = 0;
+                const increment = 100 / (stockCount * 10); // Approximate time per stock
+                const statuses = [
+                    'بدء التحليل...',
+                    'الاتصال بالسوق السعودية...',
+                    'جلب البيانات...',
+                    'تحليل الأسعار...',
+                    'البحث عن التوقعات...',
+                    'حساب المؤشرات...',
+                    'تجهيز النتائج...'
+                ];
+                let statusIndex = 0;
+                
+                const progressInterval = setInterval(function() {
+                    progress += increment;
+                    
+                    if (progress > 95) {
+                        progress = 95; // Keep some room for actual completion
+                    }
+                    
+                    $('#progress-bar').css('width', progress + '%');
+                    
+                    // Update status message
+                    if (Math.floor(progress / 15) > statusIndex && statusIndex < statuses.length - 1) {
+                        statusIndex++;
+                        $('#loading-status').text(statuses[statusIndex]);
+                    }
+                    
+                    // Clear interval when progress reaches near completion
+                    if (progress >= 95) {
+                        clearInterval(progressInterval);
+                        $('#loading-status').text('جاري إكمال التحليل...');
+                    }
+                }, 200);
+                
+                // Store interval ID for cleanup
+                window.progressInterval = progressInterval;
+            }
+            
+            // Complete progress
+            function completeProgress() {
+                if (window.progressInterval) {
+                    clearInterval(window.progressInterval);
+                }
+                $('#progress-bar').css('width', '100%');
+                $('#loading-status').text('تم الانتهاء!');
+            }
             
             function displayResults(data) {
                 // Display summary stats
