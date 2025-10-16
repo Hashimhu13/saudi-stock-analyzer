@@ -472,7 +472,25 @@ analyzer = StockAnalyzer()
 def index():
     """الصفحة الرئيسية"""
     logger.info("عرض الصفحة الرئيسية")
+    return render_template('simple.html')
+
+@app.route('/advanced')
+def advanced():
+    """الصفحة المتقدمة مع Bootstrap"""
+    logger.info("عرض الصفحة المتقدمة")
     return render_template('index.html')
+
+@app.route('/simple')
+def simple():
+    """صفحة مبسطة بدون مكتبات خارجية"""
+    logger.info("عرض الصفحة المبسطة")
+    return render_template('simple.html')
+
+@app.route('/test')
+def test():
+    """صفحة اختبار بسيطة"""
+    logger.info("عرض صفحة الاختبار")
+    return render_template('test.html')
 
 @app.route('/health')
 def health():
